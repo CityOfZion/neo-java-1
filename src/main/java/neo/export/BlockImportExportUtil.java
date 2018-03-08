@@ -206,9 +206,9 @@ public final class BlockImportExportUtil {
 				out.flush();
 			} catch (final IOException e) {
 				throw new RuntimeException(e);
+			} finally {
+				statsWriter.println(CLOSE_BRACKET);
 			}
-
-			statsWriter.println(CLOSE_BRACKET);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -278,12 +278,11 @@ public final class BlockImportExportUtil {
 		try (OutputStream statsFileOut = new FileOutputStream(
 				controller.getLocalNodeData().getChainExportStatsFileName());
 				PrintWriter statsWriter = new PrintWriter(statsFileOut, true);) {
+			statsWriter.println(OPEN_BRACKET);
 			long maxIndex = 0;
 			try (InputStream fileIn = new FileInputStream(controller.getLocalNodeData().getChainExportDataFileName());
 					BufferedInputStream buffIn = new BufferedInputStream(fileIn, 1024 * 1024 * 32);
 					DataInputStream in = new DataInputStream(buffIn);) {
-
-				statsWriter.println(OPEN_BRACKET);
 
 				final byte[] maxIndexBa = new byte[UInt32.SIZE];
 				in.read(maxIndexBa);
