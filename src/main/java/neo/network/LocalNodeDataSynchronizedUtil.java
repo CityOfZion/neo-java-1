@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.slf4j.Logger;
@@ -68,14 +69,6 @@ public final class LocalNodeDataSynchronizedUtil {
 		final Block highestBlock = localNodeData.getBlockDb().getHeaderOfBlockWithMaxIndex();
 		if (highestBlock != null) {
 			final long maxBlockIndex = highestBlock.getIndexAsLong();
-			// if
-			// ("1b9a78b3c1358af990039a4ba7cbc5c581855aed06955c3cd9aa718acc3a8516".equals(header.hash.toString()))
-			// {
-			// LOG.error("bad 2000190 header,blockIndex:{};maxBlockIndex:{};hash:{};",
-			// headerIndex, maxBlockIndex,
-			// header.hash);
-			// return false;
-			// }
 			if (headerIndex <= maxBlockIndex) {
 				final String message = "FAILURE addHeaderIfNewUnsynchronized[1]"
 						+ " (headerIndex[{}] <= maxBlockIndex[{}]) adding header : index:{}; hash:{};";
@@ -84,29 +77,53 @@ public final class LocalNodeDataSynchronizedUtil {
 			}
 		}
 		if (!localNodeData.getUnverifiedBlockPoolSet().isEmpty()) {
+			final long maxBlockIndex = highestBlock.getIndexAsLong();
+			final long numUnverifiedBlockCount = localNodeData.getUnverifiedBlockPoolSet().size();
 			final long maxUnverifiedBlockIndex = localNodeData.getUnverifiedBlockPoolSet().last().getIndexAsLong();
-			if (headerIndex <= maxUnverifiedBlockIndex) {
-				final String message = "FAILURE addHeaderIfNewUnsynchronized[2]"
-						+ " (headerIndex[{}] <= maxUnverifiedBlockIndex[{}]) adding header : index:{}; hash:{};";
-				LOG.trace(message, headerIndex, maxUnverifiedBlockIndex, headerIndex, header.hash);
-				return false;
+			final boolean gapsInBlocks = (maxBlockIndex + numUnverifiedBlockCount) <= maxUnverifiedBlockIndex;
+			if (LOG.isTraceEnabled()) {
+				final String message = "INTERIM addHeaderIfNewUnsynchronized[2] "
+						+ " (maxBlockIndex[{}]+numUnverifiedBlockCount[{}] <= maxUnverifiedBlockIndex[{}]), "
+						+ " gaps:{};";
+				LOG.trace(message, maxBlockIndex, numUnverifiedBlockCount, maxUnverifiedBlockIndex, gapsInBlocks);
+			}
+			if (gapsInBlocks) {
+				if (LOG.isTraceEnabled()) {
+					final String message = "INTERIM addHeaderIfNewUnsynchronized[2]"
+							+ " (maxBlockIndex[{}]+numUnverifiedBlockCount[{}] <= maxUnverifiedBlockIndex[{}]),"
+							+ " there are gaps in unverified blocks.";
+					LOG.trace(message, maxBlockIndex, numUnverifiedBlockCount, maxUnverifiedBlockIndex);
+				}
+				if (localNodeData.getBlockDb().containsBlockWithHash(header.hash)) {
+					final String message = "FAILURE addHeaderIfNewUnsynchronized[3]"
+							+ " containsBlockWithHash : index:{}; hash:{}; ";
+					LOG.trace(message, headerIndex, maxUnverifiedBlockIndex, headerIndex, header.hash);
+					return false;
+				}
+			} else {
+				if (headerIndex <= maxUnverifiedBlockIndex) {
+					final String message = "FAILURE addHeaderIfNewUnsynchronized[4]"
+							+ " (headerIndex[{}] <= maxUnverifiedBlockIndex[{}]) adding header : index:{}; hash:{};";
+					LOG.trace(message, headerIndex, maxUnverifiedBlockIndex, headerIndex, header.hash);
+					return false;
+				}
 			}
 		}
 		if (localNodeData.getVerifiedHeaderPoolMap().containsKey(headerIndex)) {
-			final String message = "FAILURE addHeaderIfNewUnsynchronized[3]"
+			final String message = "FAILURE addHeaderIfNewUnsynchronized[5]"
 					+ " getVerifiedHeaderPoolMap().containsKey():true; adding header : index:{}; hash:{};";
 			LOG.trace(message, headerIndex, header.hash);
 			return false;
 		}
 		if (localNodeData.getVerifiedHeaderPoolMap().containsKey(headerIndex)) {
-			final String message = "FAILURE addHeaderIfNewUnsynchronized[4]"
+			final String message = "FAILURE addHeaderIfNewUnsynchronized[6]"
 					+ " getVerifiedHeaderPoolMap().containsKey(headerIndex):true; adding header : index:{}; hash:{};";
 			LOG.trace(message, headerIndex, header.hash);
 			return false;
 		}
 
 		if (localNodeData.getUnverifiedHeaderPoolSet().contains(header)) {
-			final String message = "FAILURE addHeaderIfNewUnsynchronized[5]"
+			final String message = "FAILURE addHeaderIfNewUnsynchronized[7]"
 					+ " getUnverifiedHeaderPoolSet().contains(header):true; adding header : index:{}; hash:{};";
 			LOG.trace(message, headerIndex, header.hash);
 			return false;
@@ -186,13 +203,22 @@ public final class LocalNodeDataSynchronizedUtil {
 	 */
 	private static void removeHeadersNotOverBlockIndexUnsynchronized(final LocalNodeData localNodeData,
 			final long blockIndex) {
-		final Iterator<Header> unverifiedHeaderIt = localNodeData.getUnverifiedHeaderPoolSet().iterator();
+		final SortedSet<Header> unverifiedHeaderPoolSet = localNodeData.getUnverifiedHeaderPoolSet();
+		LOG.debug(
+				"STARTED removeHeadersNotOverBlockIndexUnsynchronized"
+						+ " blockIndex:{}; unverifiedHeaderPoolSet.size:{}; ",
+				blockIndex, unverifiedHeaderPoolSet.size());
+		final Iterator<Header> unverifiedHeaderIt = unverifiedHeaderPoolSet.iterator();
 		while (unverifiedHeaderIt.hasNext()) {
 			final Header unverifiedHeader = unverifiedHeaderIt.next();
 			if (unverifiedHeader.getIndexAsLong() <= blockIndex) {
 				unverifiedHeaderIt.remove();
 			}
 		}
+		LOG.debug(
+				"SUCCESS removeHeadersNotOverBlockIndexUnsynchronized"
+						+ " blockIndex:{}; unverifiedHeaderPoolSet.size:{};",
+				blockIndex, unverifiedHeaderPoolSet.size());
 	}
 
 	/**
@@ -280,6 +306,7 @@ public final class LocalNodeDataSynchronizedUtil {
 	public static void requestHeaders(final LocalNodeData localNodeData, final RemoteNodeData remoteNodeData) {
 		synchronized (localNodeData) {
 			final UInt256 hashRaw;
+			final long index;
 			if (localNodeData.getUnverifiedBlockPoolSet().isEmpty()
 					&& (!localNodeData.getVerifiedHeaderPoolMap().isEmpty())) {
 				final long highestHeaderIndex = localNodeData.getVerifiedHeaderPoolMap().lastKey();
@@ -287,27 +314,23 @@ public final class LocalNodeDataSynchronizedUtil {
 				LOG.debug("requestHeaders getVerifiedHeaderPoolMap height:{};hash:{};", highestHeaderIndex,
 						highestHeader.hash);
 				hashRaw = highestHeader.hash;
+				index = highestHeader.getIndexAsLong();
 			} else {
 				final Block highestBlock = localNodeData.getBlockDb().getHeaderOfBlockWithMaxIndex();
 				if (highestBlock != null) {
 					LOG.debug("requestHeaders getHighestBlock height:{};hash:{};", highestBlock.getIndexAsLong(),
 							highestBlock.hash);
 					hashRaw = highestBlock.hash;
+					index = highestBlock.getIndexAsLong();
 				} else {
 					LOG.debug("requestHeaders hash is genesis.");
 					hashRaw = GenesisBlockUtil.GENESIS_HASH;
+					index = GenesisBlockUtil.GENESIS_BLOCK.getIndexAsLong();
 				}
 			}
 			final byte[] ba = hashRaw.getBytesCopy();
 			final UInt256 hash = new UInt256(ba);
-			LOG.debug("requestHeaders hash:{};", hash);
-
-			// fixed bug at height 2000190
-			// final String goodHashStr =
-			// "8cb9fee28a48a45468e3c0a229fd4473288cdd9794c10cac7b8f4681ca404342";
-			// final UInt256 goodHash = new
-			// UInt256(ByteBuffer.wrap(Hex.decode(goodHashStr)));
-			// MessageUtil.sendGetHeaders(remoteNodeData, localNodeData, goodHash);
+			LOG.debug("requestHeaders index:{};hash:{};", index, hash);
 
 			MessageUtil.sendGetHeaders(remoteNodeData, localNodeData, hash);
 		}
