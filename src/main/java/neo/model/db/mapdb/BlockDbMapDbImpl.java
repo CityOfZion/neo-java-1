@@ -582,8 +582,6 @@ public final class BlockDbMapDbImpl implements BlockDb {
 	/**
 	 * return the map of transactions by account and index.
 	 *
-	 *
-	 *
 	 * @return the map of transactions by account and index.
 	 */
 	private BTreeMap<byte[], byte[]> getTransactionByAccountAndIndexMap() {
