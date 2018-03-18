@@ -331,6 +331,13 @@ public class LocalControllerNode {
 			final TransactionType txType = TransactionType.valueOf(key);
 			transactionSystemFeeMap.put(txType, ModelUtil.getFixed8(BigInteger.valueOf(value)));
 		}
+		for (final TransactionType txType : TransactionType.values()) {
+			if (!transactionSystemFeeMap.containsKey(txType)) {
+				LOG.error("TransactionType {} has no SystemFee in the configuration, setting SystemFee to zero",
+						txType);
+				transactionSystemFeeMap.put(txType, ModelUtil.FIXED8_ZERO);
+			}
+		}
 		return transactionSystemFeeMap;
 	}
 
@@ -482,6 +489,18 @@ public class LocalControllerNode {
 
 		LocalNodeDataSynchronizedUtil.addUnverifiedBlock(localNodeData, newBlock);
 		// LocalNodeDataSynchronizedUtil.verifyUnverifiedBlocks(localNodeData);
+	}
+
+	/**
+	 * does something on a "consensus" message.
+	 *
+	 * @param peer
+	 *            the peer that sent the message.
+	 * @param message
+	 *            the message.
+	 */
+	private void onConsensus(final RemoteNodeControllerRunnable peer, final Message message) {
+		// TODO: figure out what to do here.
 	}
 
 	/**
@@ -689,6 +708,10 @@ public class LocalControllerNode {
 			case TX:
 				peer.getData().setAcknowledgedPeer(true);
 				onTx(peer, message);
+				break;
+			case CONSENSUS:
+				peer.getData().setAcknowledgedPeer(true);
+				onConsensus(peer, message);
 				break;
 			}
 
