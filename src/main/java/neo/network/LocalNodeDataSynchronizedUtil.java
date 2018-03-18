@@ -69,6 +69,14 @@ public final class LocalNodeDataSynchronizedUtil {
 		final Block highestBlock = localNodeData.getBlockDb().getHeaderOfBlockWithMaxIndex();
 		if (highestBlock != null) {
 			final long maxBlockIndex = highestBlock.getIndexAsLong();
+			// if
+			// ("1b9a78b3c1358af990039a4ba7cbc5c581855aed06955c3cd9aa718acc3a8516".equals(header.hash.toString()))
+			// {
+			// LOG.error("bad 2000190 header,blockIndex:{};maxBlockIndex:{};hash:{};",
+			// headerIndex, maxBlockIndex,
+			// header.hash);
+			// return false;
+			// }
 			if (headerIndex <= maxBlockIndex) {
 				final String message = "FAILURE addHeaderIfNewUnsynchronized[1]"
 						+ " (headerIndex[{}] <= maxBlockIndex[{}]) adding header : index:{}; hash:{};";
@@ -331,6 +339,13 @@ public final class LocalNodeDataSynchronizedUtil {
 			final byte[] ba = hashRaw.getBytesCopy();
 			final UInt256 hash = new UInt256(ba);
 			LOG.debug("requestHeaders index:{};hash:{};", index, hash);
+
+			// fixed bug at height 2000190
+			// final String goodHashStr =
+			// "8cb9fee28a48a45468e3c0a229fd4473288cdd9794c10cac7b8f4681ca404342";
+			// final UInt256 goodHash = new
+			// UInt256(ByteBuffer.wrap(Hex.decode(goodHashStr)));
+			// MessageUtil.sendGetHeaders(remoteNodeData, localNodeData, goodHash);
 
 			MessageUtil.sendGetHeaders(remoteNodeData, localNodeData, hash);
 		}
