@@ -528,6 +528,9 @@ public final class ModelUtil {
 	 * @return the address.
 	 */
 	public static String scriptHashToAddress(final UInt160 scriptHash) {
+		if (scriptHash == null) {
+			return null;
+		}
 		final byte[] data = new byte[21];
 
 		if (LOG.isTraceEnabled()) {
