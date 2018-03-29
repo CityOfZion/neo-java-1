@@ -13,7 +13,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.json.JSONObject;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
@@ -577,6 +578,12 @@ public final class BlockDbMapDbImpl implements BlockDb {
 	private long getMaxBlockIndex() {
 		final long retval = db.atomicLong(MAX_BLOCK_INDEX, 0).createOrOpen().get();
 		return retval;
+	}
+
+	@Override
+	public <K, V> Map<K, V> getStates(final Class<K> keyClass, final Class<V> valueClass) {
+		// TODO: implement this.
+		throw new NotImplementedException("getStates");
 	}
 
 	/**

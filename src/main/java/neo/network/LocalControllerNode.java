@@ -807,8 +807,8 @@ public class LocalControllerNode {
 			data.setBlockHeight(blockHeight);
 			data.setLastMessageTimestamp(System.currentTimeMillis());
 
-			if (blockHeight > localNodeData.getBlockchainBlockCount()) {
-				localNodeData.setBlockchainBlockCount(blockHeight);
+			if (blockHeight > localNodeData.getBlockchainBlockHeight()) {
+				localNodeData.setBlockchainBlockHeight(blockHeight);
 			}
 
 		}

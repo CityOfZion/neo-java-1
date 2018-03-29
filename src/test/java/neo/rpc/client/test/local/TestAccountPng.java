@@ -140,10 +140,7 @@ public class TestAccountPng {
 			for (final Transaction t : block.getTransactionList()) {
 				// update assets based on tx inputs.
 				for (final CoinReference cr : t.inputs) {
-					final UInt256 prevHashReversed = cr.prevHash.reverse();
-					final Transaction tiTx = blockDb.getTransactionWithHash(prevHashReversed);
-					final int prevIndex = cr.prevIndex.asInt();
-					final TransactionOutput ti = tiTx.outputs.get(prevIndex);
+					final TransactionOutput ti = ModelUtil.getTransactionOutput(blockDb, cr);
 					if (coinDataMap.containsKey(ti.assetId)) {
 						final CoinData coinData = coinDataMap.get(ti.assetId);
 						final UInt160 input = ti.scriptHash;
