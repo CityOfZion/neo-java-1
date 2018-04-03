@@ -1,5 +1,6 @@
 package neo.model.util;
 
+import neo.model.ScriptVerificationResultEnum;
 import neo.model.bytes.UInt160;
 import neo.model.core.Transaction;
 import neo.model.db.BlockDb;
@@ -16,7 +17,7 @@ import neo.vm.contract.TriggerType;
  * @author coranos
  *
  */
-public class VerifyScriptUtil {
+public final class VerifyScriptUtil {
 
 	/**
 	 * verify a script's execution.
@@ -28,11 +29,11 @@ public class VerifyScriptUtil {
 	 * @return true if the script was executed, and did not halt, and left nothing
 	 *         on the stack.
 	 */
-	public static boolean VerifyScripts(final BlockDb blockDb, final Transaction tx) {
+	public static ScriptVerificationResultEnum verifyScripts(final BlockDb blockDb, final Transaction tx) {
 		final UInt160[] hashes = tx.getScriptHashesForVerifying(blockDb);
 
 		if (hashes.length != tx.scripts.size()) {
-			return false;
+			return ScriptVerificationResultEnum.FAIL_HASH_SCRIPT_COUNT_DIFFERS;
 		}
 		for (int i = 0; i < hashes.length; i++) {
 			byte[] verification = tx.scripts.get(i).getCopyOfVerificationScript();
@@ -41,8 +42,9 @@ public class VerifyScriptUtil {
 				sb.emitAppCall(hashes[i].toByteArray(), false);
 				verification = sb.toByteArray();
 			} else {
-				if (hashes[i] != tx.scripts.get(i).getScriptHash()) {
-					return false;
+				final UInt160 txScriptHash = tx.scripts.get(i).getScriptHash();
+				if (!hashes[i].equals(txScriptHash)) {
+					return ScriptVerificationResultEnum.FAIL_HASH_MISMATCH;
 				}
 			}
 			final StateReader service = new StateReader();
@@ -53,12 +55,21 @@ public class VerifyScriptUtil {
 			engine.loadScript(verification, false);
 			engine.loadScript(tx.scripts.get(i).getCopyOfInvocationScript(), true);
 			if (!engine.Execute()) {
-				return false;
+				return ScriptVerificationResultEnum.FAIL_ENGINE_EXECUTE;
 			}
-			if ((engine.evaluationStack.getCount() != 1) || !engine.evaluationStack.pop().getBoolean()) {
-				return false;
+			if (engine.evaluationStack.getCount() != 1) {
+				return ScriptVerificationResultEnum.FAIL_STACK_CONTAINS_MANY;
+			}
+			if (!engine.evaluationStack.pop().getBoolean()) {
+				return ScriptVerificationResultEnum.FAIL_STACK_CONTAINS_FALSE;
 			}
 		}
-		return true;
+		return ScriptVerificationResultEnum.PASS;
+	}
+
+	/**
+	 * the constructor.
+	 */
+	private VerifyScriptUtil() {
 	}
 }

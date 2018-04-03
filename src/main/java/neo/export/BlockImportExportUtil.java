@@ -14,7 +14,9 @@ import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -34,6 +36,7 @@ import neo.model.core.Transaction;
 import neo.model.core.TransactionOutput;
 import neo.model.core.TransactionType;
 import neo.model.db.BlockDb;
+import neo.model.util.MapUtil;
 import neo.model.util.ModelUtil;
 import neo.network.LocalControllerNode;
 import neo.network.model.LocalNodeData;
@@ -70,6 +73,11 @@ public final class BlockImportExportUtil {
 	 * JSON key "blocks".
 	 */
 	private static final String BLOCKS = "blocks";
+
+	/**
+	 * JSON key "block_bins".
+	 */
+	private static final String BLOCK_BINS = "block_bins";
 
 	/**
 	 * JSON key "transactions".
@@ -150,6 +158,7 @@ public final class BlockImportExportUtil {
 				final long[] interimTx = new long[TransactionType.values().length];
 				final long[] interimTxNetworkFees = new long[TransactionType.values().length];
 				long totalTx = 0;
+				final Map<String, Long> numBlocksByTxCountMap = new TreeMap<>();
 
 				@SuppressWarnings("unchecked")
 				final Set<UInt160>[] activeAccountSet = new Set[TransactionType.values().length];
@@ -181,6 +190,8 @@ public final class BlockImportExportUtil {
 						}
 					}
 
+					MapUtil.increment(numBlocksByTxCountMap, String.valueOf(block.getTransactionList().size()));
+
 					if (startMs < 0) {
 						startMs = blockTs.getTime();
 					}
@@ -191,7 +202,7 @@ public final class BlockImportExportUtil {
 						final Block maxBlockHeader = blockDb.getHeaderOfBlockWithMaxIndex();
 
 						final JSONObject stats = getStats(blockDb, interimBlocks, interimBytes, interimTx,
-								activeAccountSet, procStartMs, blockTs, interimTxNetworkFees);
+								activeAccountSet, procStartMs, blockTs, interimTxNetworkFees, numBlocksByTxCountMap);
 						if (blockIx > 0) {
 							statsWriter.println(COMMA);
 						}
@@ -211,6 +222,8 @@ public final class BlockImportExportUtil {
 						for (int txOrdinal = 0; txOrdinal < activeAccountSet.length; txOrdinal++) {
 							activeAccountSet[txOrdinal].clear();
 						}
+
+						numBlocksByTxCountMap.clear();
 
 						procStartMs = System.currentTimeMillis();
 					}
@@ -312,11 +325,13 @@ public final class BlockImportExportUtil {
 	 *            block timestamp.
 	 * @param interimTxNetworkFees
 	 *            the interim transaction network fees to use.
+	 * @param numBlocksByTxCountMap
+	 *            the bins of how many transactions were in each block.
 	 * @return the stats JSON.
 	 */
 	public static JSONObject getStats(final BlockDb blockDb, final long interimBlocks, final long interimBytes,
 			final long[] interimTx, final Set<UInt160>[] activeAccountSet, final long procStartMs,
-			final Timestamp blockTs, final long[] interimTxNetworkFees) {
+			final Timestamp blockTs, final long[] interimTxNetworkFees, final Map<String, Long> numBlocksByTxCountMap) {
 		final String dateStr = DATE_FORMAT.format(blockTs);
 		final JSONObject stats = new JSONObject();
 		stats.put(DATE, dateStr);
@@ -346,6 +361,13 @@ public final class BlockImportExportUtil {
 			transactionNetworkFees.put(tType.name().toLowerCase(), interimTxNetworkFees[tType.ordinal()]);
 		}
 		stats.put(TRANSACTION_NETWORK_FEES, transactionNetworkFees);
+
+		final JSONObject blockBins = new JSONObject();
+		for (final String binName : numBlocksByTxCountMap.keySet()) {
+			final long numBlocks = numBlocksByTxCountMap.get(binName);
+			blockBins.put(binName, numBlocks);
+		}
+		stats.put(BLOCK_BINS, blockBins);
 
 		stats.put(BLOCKS, interimBlocks);
 		stats.put(BYTES, interimBytes);
@@ -387,6 +409,7 @@ public final class BlockImportExportUtil {
 				final long[] interimTx = new long[TransactionType.values().length];
 				final long[] interimTxNetworkFees = new long[TransactionType.values().length];
 				long totalTx = 0;
+				final Map<String, Long> numBlocksByTxCountMap = new TreeMap<>();
 
 				@SuppressWarnings("unchecked")
 				final Set<UInt160>[] activeAccountSet = new Set[TransactionType.values().length];
@@ -421,6 +444,9 @@ public final class BlockImportExportUtil {
 
 					LOG.debug("SUCCESS import {} of {} hash {}", INTEGER_FORMAT.format(blockIx),
 							INTEGER_FORMAT.format(maxIndex), block.hash);
+
+					MapUtil.increment(numBlocksByTxCountMap, String.valueOf(block.getTransactionList().size()));
+
 					final Timestamp blockTs = block.getTimestamp();
 
 					if (startMs < 0) {
@@ -433,7 +459,7 @@ public final class BlockImportExportUtil {
 						final Block maxBlockHeader = blockDb.getHeaderOfBlockWithMaxIndex();
 
 						final JSONObject stats = getStats(blockDb, interimBlocks, interimBytes, interimTx,
-								activeAccountSet, procStartMs, blockTs, interimTxNetworkFees);
+								activeAccountSet, procStartMs, blockTs, interimTxNetworkFees, numBlocksByTxCountMap);
 						if (blockIx > 0) {
 							statsWriter.println(COMMA);
 						}
@@ -454,6 +480,9 @@ public final class BlockImportExportUtil {
 						for (int txOrdinal = 0; txOrdinal < activeAccountSet.length; txOrdinal++) {
 							activeAccountSet[txOrdinal].clear();
 						}
+
+						numBlocksByTxCountMap.clear();
+
 						procStartMs = System.currentTimeMillis();
 					}
 				}

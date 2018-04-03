@@ -15,7 +15,7 @@ import neo.vm.StateBase;
 
 /**
  * contract state.
- * 
+ *
  * @author coranos
  *
  */

@@ -856,7 +856,7 @@ public class ExecutionEngine {
 
 	/**
 	 * return the crypto package.
-	 * 
+	 *
 	 * @return the crypto package.
 	 */
 	public ICrypto getCrypto() {
@@ -910,7 +910,7 @@ public class ExecutionEngine {
 
 	/**
 	 * return the service.
-	 * 
+	 *
 	 * @return the service.
 	 */
 	public InteropService getService() {
@@ -928,7 +928,7 @@ public class ExecutionEngine {
 
 	/**
 	 * return the script table.
-	 * 
+	 *
 	 * @return the script table.
 	 */
 	public IScriptTable getTable() {

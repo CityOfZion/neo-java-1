@@ -8,15 +8,15 @@ import neo.model.core.Block;
 import neo.vm.InteropService;
 
 public class StateMachine extends InteropService {
-	
+
 	private final Block persisting_block;
-	
+
 	private final Map<UInt160, AccountState> accounts;
-	
+
 	private final Map<UInt256, AssetState> assets;
-	
+
 	private final Map<UInt160, ContractState> contracts;
-	
+
 	private final Map<StorageKey, StorageItem> storages;
 
 	//

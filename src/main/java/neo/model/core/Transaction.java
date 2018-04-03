@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.json.JSONObject;
 
@@ -154,15 +154,19 @@ public final class Transaction implements ToJsonObject, ByteArraySerializable, S
 	 * @return the script hashes used for verification.
 	 */
 	public UInt160[] getScriptHashesForVerifying(final BlockDb blockDb) {
-		final Set<UInt160> hashes = new TreeSet<>();
+		final Set<UInt160> hashes = new LinkedHashSet<>();
 		for (final CoinReference cr : inputs) {
-			final TransactionOutput ti = ModelUtil.getTransactionOutput(blockDb, cr);
-			hashes.add(ti.scriptHash);
+			final TransactionOutput to = ModelUtil.getTransactionOutput(blockDb, cr);
+			hashes.add(to.scriptHash);
 		}
 		for (final TransactionAttribute attribute : attributes) {
 			if (attribute.usage.equals(TransactionAttributeUsage.SCRIPT)) {
 				hashes.add(new UInt160(attribute.getCopyOfData()));
 			}
+		}
+
+		if (type.equals(TransactionType.ISSUE_TRANSACTION)) {
+			// TODO: handle issue transactions.
 		}
 
 		// TODO: add AssetState duty flag code.
