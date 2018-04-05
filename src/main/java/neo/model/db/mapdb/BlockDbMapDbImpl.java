@@ -254,11 +254,11 @@ public final class BlockDbMapDbImpl implements BlockDb {
 
 	@Override
 	public Map<UInt160, Map<UInt256, Fixed8>> getAccountAssetValueMap() {
-		LOG.error("getAccountAssetValueMap STARTED");
+		LOG.info("getAccountAssetValueMap STARTED");
 		final Map<UInt160, Map<UInt256, Fixed8>> accountAssetValueMap = new TreeMap<>();
 
 		final BTreeMap<byte[], byte[]> assetAndValueByAccountMap = getAssetAndValueByAccountMap();
-		LOG.error("getAccountAssetValueMap INTERIM assetAndValueByAccountMap.size:{};",
+		LOG.info("getAccountAssetValueMap INTERIM assetAndValueByAccountMap.size:{};",
 				assetAndValueByAccountMap.size());
 
 		for (final byte[] key : assetAndValueByAccountMap.getKeys()) {
@@ -268,7 +268,7 @@ public final class BlockDbMapDbImpl implements BlockDb {
 			accountAssetValueMap.put(account, map);
 		}
 
-		LOG.error("getAccountAssetValueMap SUCCESS, count:{}", accountAssetValueMap.size());
+		LOG.info("getAccountAssetValueMap SUCCESS, count:{}", accountAssetValueMap.size());
 		return accountAssetValueMap;
 	}
 
