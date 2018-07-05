@@ -1,30 +1,16 @@
 package neo.model.core;
 
 /**
- * the transaction types.
+ * the state type.
  *
  * @author coranos
  *
  */
-public enum TransactionType {
+public enum StateType {
 	/** Miner Transaction. */
-	MINER_TRANSACTION(0x00),
+	ACCOUNT(0x40),
 	/** Issue Transaction. */
-	ISSUE_TRANSACTION(0x01),
-	/** Claim Transaction. */
-	CLAIM_TRANSACTION(0x02),
-	/** Enrollment Transaction. */
-	ENROLLMENT_TRANSACTION(0x20),
-	/** Register Transaction. */
-	REGISTER_TRANSACTION(0x40),
-	/** Contract Transaction. */
-	CONTRACT_TRANSACTION(0x80),
-	/** State Transaction. */
-	STATE_TRANSACTION(0x90),
-	/** Publish Transaction. */
-	PUBLISH_TRANSACTION(0xd0),
-	/** Invocation Transaction. */
-	INVOCATION_TRANSACTION(0xd1),
+	VALIDATOR(0x48),
 	/** ending semicolon */
 	;
 
@@ -37,8 +23,8 @@ public enum TransactionType {
 	 *
 	 * @return the transaction type.
 	 */
-	public static TransactionType valueOfByte(final byte typeByte) {
-		for (final TransactionType it : TransactionType.values()) {
+	public static StateType valueOfByte(final byte typeByte) {
+		for (final StateType it : StateType.values()) {
 			if (it.typeByte == typeByte) {
 				return it;
 			}
@@ -57,7 +43,7 @@ public enum TransactionType {
 	 * @param typeInt
 	 *            the typeByte as an int.
 	 */
-	TransactionType(final int typeInt) {
+	StateType(final int typeInt) {
 		typeByte = (byte) (typeInt & 0xff);
 	}
 
